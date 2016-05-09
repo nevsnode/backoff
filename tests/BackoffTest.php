@@ -70,7 +70,7 @@ class BackoffTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(9, $this->backoff->getJitterMax());
 
         $this->backoff->setJitterMax(-3);
-        $this->assertEquals(0, $this->getJitterMax());
+        $this->assertEquals(0, $this->backoff->getJitterMax());
     }
 
     public function testDefaults()
@@ -84,22 +84,62 @@ class BackoffTest extends PHPUnit_Framework_TestCase
 
     public function testAddDelayWithoutJitter()
     {
-        $this->backoff->setJitter(false);
+        $this->runTestDelay(false);
+    }
 
-        $this->assertEquals(0, $this->backoff->getDelay());
+    public function testAddDelayWithJitter()
+    {
+        $this->runTestDelay(true);
+    }
 
-        // first delay should be the minimum value
+    public function testDelayFactor()
+    {
+        $cases = [
+            [false, 1],
+            [true,  1],
+            [false, 2],
+            [true,  2],
+            [false, 3],
+            [true,  3],
+            [false, M_E],
+            [true,  M_E],
+        ];
+
+        foreach ($cases as $case) {
+            $this->runTestDelay($case[0], $case[1]);
+        }
+    }
+
+    protected function runTestDelay($withJitter, $factor = null)
+    {
+        $this->backoff->setJitter($withJitter);
+
+        if (!isset($factor)) {
+            $factor = $this->backoff->getFactor();
+        }
+
+        // first delay should be the between minimum value and minimum value + jitter-max
         $this->backoff->addDelay();
-        $this->assertEquals($this->backoffDefaults['min'], $this->backoff->getDelay());
+        $max = $this->backoffDefaults['min'];
+        if ($withJitter) {
+            $max += $this->backoffDefaults['jitterMax'];
+        }
+        $this->isBetween($this->backoff->getDelay(), $this->backoffDefaults['min'], $max);
 
         for ($i = 1; $i <= 3; $i++) {
             // following delays should be the number of delays * minimum value
             $delay = $this->backoffDefaults['min'] * $i;
             // (and applying the defined factor)
-            $delay *= $this->backoffDefaults['factor'];
+            $delay *= $factor;
+
+            // the returned delay should be at most the 'regular' delay + jitter-max
+            $max = $delay;
+            if ($withJitter) {
+                $max += $this->backoffDefaults['jitterMax'];
+            }
 
             $this->backoff->addDelay();
-            $this->assertEquals($delay, $this->backoff->getDelay());
+            $this->isBetween($this->backoff->getDelay(), $delay, $max);
         }
 
         for ($i = 0; $i < 50; $i++) {
@@ -111,21 +151,16 @@ class BackoffTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(0, $this->backoff->getDelay());
 
         $this->backoff->addDelay();
-        $this->assertEquals($this->backoffDefaults['min'], $this->backoff->getDelay());
+        $max = $this->backoffDefaults['min'];
+        if ($withJitter) {
+            $max += $this->backoffDefaults['jitterMax'];
+        }
+        $this->isBetween($this->backoff->getDelay(), $this->backoffDefaults['min'], $max);
     }
 
     protected function isBetween($i, $a, $b)
     {
-        return ($i >= $a && $i <= $b);
-    }
-
-    public function testAddDelayWithJitter()
-    {
-        // TODO
-    }
-
-    public function testDelayFactor()
-    {
-        // TODO
+        $this->assertGreaterThanOrEqual($a, $i);
+        $this->assertLessThanOrEqual($b, $i);
     }
 }
