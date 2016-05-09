@@ -30,9 +30,6 @@ class BackoffTest extends PHPUnit_Framework_TestCase
 
     public function testSetGetMax()
     {
-        $this->backoff->setMax(1);
-        $this->assertEquals(1, $this->backoff->getMax());
-
         $this->backoff->setMax(9);
         $this->assertEquals(9, $this->backoff->getMax());
 
@@ -107,6 +104,7 @@ class BackoffTest extends PHPUnit_Framework_TestCase
 
         foreach ($cases as $case) {
             $this->runTestDelay($case[0], $case[1]);
+            $this->setUp();
         }
     }
 
@@ -114,7 +112,9 @@ class BackoffTest extends PHPUnit_Framework_TestCase
     {
         $this->backoff->setJitter($withJitter);
 
-        if (!isset($factor)) {
+        if (isset($factor)) {
+            $this->backoff->setFactor($factor);
+        } else {
             $factor = $this->backoff->getFactor();
         }
 
