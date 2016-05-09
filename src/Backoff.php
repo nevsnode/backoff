@@ -15,38 +15,48 @@ class Backoff
 
     public function __construct(array $params = [])
     {
-        $params = array_merge([
+        $defaults = [
             'min'       => 1,
             'max'       => 30,
             'factor'    => 2,
             'jitter'    => true,
             'jitterMax' => 2,
-        ], $params);
+        ];
 
-        $this->min          = (int)$params['min'];
-        $this->max          = (int)$params['max'];
-        $this->factor       = (int)$params['factor'];
-        $this->jitter       = (bool)$params['jitter'];
-        $this->jitterMax    = (int)$params['jitterMax'];
-
-        if ($this->min < 1) {
-            $this->min = 1;
+        foreach ($defaults as $key => $val) {
+            $method = 'set' . ucfirst($key);
+            if (isset($params[$key])) {
+                $val = $params[$key];
+            }
+            call_user_func([$this, $method], $val);
         }
     }
 
     public function setMin($min)
     {
         $this->min = (int)$min;
+
+        if ($this->min < 1) {
+            $this->min = 1;
+        }
     }
 
     public function setMax($max)
     {
         $this->max = (int)$max;
+
+        if ($this->max < $this->min) {
+            $this->max = $this->min;
+        }
     }
 
     public function setFactor($factor)
     {
-        $this->factor = (int)$factor;
+        $this->factor = (float)$factor;
+
+        if ($this->factor < 1) {
+            $this->factor = 1;
+        }
     }
 
     public function setJitter($jitter)
@@ -57,6 +67,10 @@ class Backoff
     public function setJitterMax($jitterMax)
     {
         $this->jitterMax = (int)$jitterMax;
+
+        if ($this->jitterMax < 0) {
+            $this->jitterMax = 0;
+        }
     }
 
     public function getMin()
