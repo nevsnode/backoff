@@ -4,32 +4,54 @@ namespace nevsnode;
 
 class Backoff
 {
-    protected $min          = 1;
-    protected $max          = 30;
-    protected $factor       = 2;
-    protected $jitter       = true;
-    protected $jitterMax    = 2;
+    public static $defaults = [];
 
-    private $attempt        = 0;
-    private $delay          = 0;
+    protected static $_defaults = [
+        'min' => 1,
+        'max' => 30,
+        'factor' => 2,
+        'jitter' => true,
+        'jitterMax' => 2,
+    ];
+
+    protected $min = 1;
+    protected $max = 30;
+    protected $factor = 2;
+    protected $jitter = true;
+    protected $jitterMax = 2;
+
+    private $attempt = 0;
+    private $delay = 0;
 
     public function __construct(array $params = [])
     {
-        $defaults = [
-            'min'       => 1,
-            'max'       => 30,
-            'factor'    => 2,
-            'jitter'    => true,
-            'jitterMax' => 2,
-        ];
-
-        foreach ($defaults as $key => $val) {
+        foreach (self::$_defaults as $key => $val) {
             $method = 'set' . ucfirst($key);
+
+            if (isset(self::$defaults[$key])) {
+                $val = self::$defaults[$key];
+            }
             if (isset($params[$key])) {
                 $val = $params[$key];
             }
+
             call_user_func([$this, $method], $val);
         }
+    }
+
+    public function __call($name, $args)
+    {
+        if (0 !== strpos($name, 'get')) {
+            trigger_error('Call to undefined method ' . __CLASS__ . '::' . $name . '()', E_USER_ERROR);
+            return;
+        }
+
+        $val = lcfirst(substr($name, 3));
+        if (!isset(self::$_defaults[$val])) {
+            return false;
+        }
+
+        return $this->$val;
     }
 
     public function setMin($min)
@@ -71,31 +93,6 @@ class Backoff
         if ($this->jitterMax < 0) {
             $this->jitterMax = 0;
         }
-    }
-
-    public function getMin()
-    {
-        return $this->min;
-    }
-
-    public function getMax()
-    {
-        return $this->max;
-    }
-
-    public function getFactor()
-    {
-        return $this->factor;
-    }
-
-    public function getJitter()
-    {
-        return $this->jitter;
-    }
-
-    public function getJitterMax()
-    {
-        return $this->jitterMax;
     }
 
     public function addDelay()
