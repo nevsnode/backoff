@@ -7,18 +7,18 @@ class Backoff
     public static $defaults = [];
 
     protected static $_defaults = [
-        'min' => 1,
-        'max' => 30,
+        'min' => 1000,
+        'max' => 30000,
         'factor' => 2,
         'jitter' => true,
-        'jitterMax' => 2,
+        'jitterMax' => 2000,
     ];
 
-    protected $min = 1;
-    protected $max = 30;
-    protected $factor = 2;
-    protected $jitter = true;
-    protected $jitterMax = 2;
+    protected $min;
+    protected $max;
+    protected $factor;
+    protected $jitter;
+    protected $jitterMax;
 
     private $attempt = 0;
     private $delay = 0;
@@ -61,6 +61,8 @@ class Backoff
         if ($this->min < 1) {
             $this->min = 1;
         }
+
+        return $this;
     }
 
     public function setMax($max)
@@ -70,6 +72,8 @@ class Backoff
         if ($this->max < $this->min) {
             $this->max = $this->min;
         }
+
+        return $this;
     }
 
     public function setFactor($factor)
@@ -79,11 +83,15 @@ class Backoff
         if ($this->factor < 1) {
             $this->factor = 1;
         }
+
+        return $this;
     }
 
     public function setJitter($jitter)
     {
         $this->jitter = (bool)$jitter;
+
+        return $this;
     }
 
     public function setJitterMax($jitterMax)
@@ -93,6 +101,8 @@ class Backoff
         if ($this->jitterMax < 0) {
             $this->jitterMax = 0;
         }
+
+        return $this;
     }
 
     public function addDelay()
@@ -128,5 +138,26 @@ class Backoff
     public function getDelay()
     {
         return $this->delay;
+    }
+
+    public function retryOnException($retries, callable $func)
+    {
+        for ($i = 0; $i < $retries; $i++) {
+            usleep($this->getDelay() * 1000);
+
+            try {
+                $return = call_user_func($func);
+
+                $this->resetDelay();
+                return $return;
+            } catch (\Exception $e) {
+                if ($i + 1 === $retries) {
+                    $this->resetDelay();
+                    throw $e;
+                }
+
+                $this->addDelay();
+            }
+        }
     }
 }
