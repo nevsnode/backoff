@@ -1,14 +1,16 @@
 <?php
 
-class BackoffTest extends PHPUnit_Framework_TestCase
+use PHPUnit\Framework\TestCase;
+
+class BackoffTest extends TestCase
 {
     protected $backoff;
     protected $backoffDefaults = [
-        'min' => 5,
-        'max' => 100,
+        'min' => 500,
+        'max' => 10000,
         'factor' => 3,
         'jitter' => true,
-        'jitterMax' => 10,
+        'jitterMax' => 10000,
     ];
 
     public function setUp()
@@ -30,8 +32,8 @@ class BackoffTest extends PHPUnit_Framework_TestCase
 
     public function testSetGetMax()
     {
-        $this->backoff->setMax(9);
-        $this->assertEquals(9, $this->backoff->getMax());
+        $this->backoff->setMax(9000);
+        $this->assertEquals(9000, $this->backoff->getMax());
 
         $this->backoff->setMax(-9);
         $this->assertEquals($this->backoffDefaults['min'], $this->backoff->getMax());
@@ -126,7 +128,7 @@ class BackoffTest extends PHPUnit_Framework_TestCase
         }
         $this->isBetween($this->backoff->getDelay(), $this->backoffDefaults['min'], $max);
 
-        for ($i = 1; $i <= 3; $i++) {
+        for ($i = 1; $i <= 5; $i++) {
             // following delays should be the number of delays * minimum value
             $delay = $this->backoffDefaults['min'] * $i;
             // (and applying the defined factor)
