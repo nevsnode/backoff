@@ -10,7 +10,7 @@ Install
 composer require nevsnode/backoff
 ```
 
-Usage
+Example Usage
 ---
 
 ```php
@@ -19,58 +19,26 @@ use nevsnode\Backoff;
 
 $backoff = new Backoff();
 
-while (true) {
-    $delay = $backoff->getDelay()
-
-    // ...
-
-    if ($success) {
-        $backoff->resetDelay();
-    } else {
-        $backoff->addDelay();
+$resource = new ExampleResource();
+$result = $backoff->retryOnException(5, function() use ($resource) {
+    $return = $resource->fetchSomething();
+    if (!$return) {
+        throw new Exception('Failed to fetch something');
     }
-}
-```
-
-#### Example
-
-*Note:* This example just repeats failing items which may lead to an infinite loop.
-Depending on your use-case I recommend to add an additional check that breaks the for-loop after a certain maximum number of iterations.
-
-```php
-<?php
-use nevsnode\Backoff;
-
-$backoff = new Backoff();
-
-$items = [];
-for ($i = 0, $c = count($items); $i < $c; ) {
-    if ($delay = $backoff->getDelay()) {
-        sleep($delay);
-    }
-
-    $item = $items[$i];
-    $success = handleItem($item);
-
-    if ($success) {
-        $backoff->resetDelay();
-        $i++;
-    } else {
-        $backoff->addDelay();
-    }
-}
+    return $return;
+});
 ```
 
 Settings
 ---
 
-Setting|Type|Description
-------|----|-----------
-min|Integer|Minimum delay
-max|Integer|Maximum delay
-factor|Float|Multiplicator of delay on additional delays
-jitter|Boolean|Allow jitter
-jitterMax|Integer|Maximum jitter
+Setting|Type|Default|Description
+-------|----|-------|-----------
+min|Integer|1000|Minimum delay (in ms)
+max|Integer|30000|Maximum delay (in ms)
+factor|Float|2.0|Multiplicator of delay on additional delays
+jitter|Boolean|true|Allow jitter
+jitterMax|Integer|2000|Maximum jitter (in ms)
 
 
 The settings can be passed as an associative array to the constructor and returned or adjusted after instantiation:
@@ -80,15 +48,15 @@ The settings can be passed as an associative array to the constructor and return
 
 // pass settings to constructor
 $backoff = new Backoff([
-    'min' => 2,
-    'max' => 10,
+    'min' => 2000,
+    'max' => 10000,
     'factor' => M_E,
 ]);
 
 // define setting through setter
 $backoff->setJitter(true);
-$backoff->setJitterMax(6);
-$backoff->setMin(3);
+$backoff->setJitterMax(6000);
+$backoff->setMin(3000);
 
 // return setting through getter
 $max = $backoff->getMax();
