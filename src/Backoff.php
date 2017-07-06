@@ -140,7 +140,7 @@ class Backoff
         return $this->delay;
     }
 
-    public function retryOnException($retries, callable $func)
+    public function retryOnException($retries, callable $func, $final = null)
     {
         for ($i = 0; $i < $retries; $i++) {
             usleep($this->getDelay() * 1000);
@@ -153,6 +153,14 @@ class Backoff
             } catch (\Exception $e) {
                 if ($i + 1 === $retries) {
                     $this->resetDelay();
+
+                    if (isset($final)) {
+                        if (is_callable($final)) {
+                            return call_user_func($final, $e);
+                        }
+                        return $final;
+                    }
+
                     throw $e;
                 }
 

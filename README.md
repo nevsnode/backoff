@@ -20,13 +20,33 @@ use nevsnode\Backoff;
 $backoff = new Backoff();
 
 $resource = new ExampleResource();
-$result = $backoff->retryOnException(5, function() use ($resource) {
+$result = $backoff->retryOnException(5, function () use ($resource) {
     $return = $resource->fetchSomething();
     if (!$return) {
         throw new Exception('Failed to fetch something');
     }
     return $return;
 });
+```
+
+By default, when exceeding the number of retries, the last exception will just be thrown again.
+Optionally a final closure/value can be defined which is executed or returned instead:
+
+```php
+<?php
+$backoff = new nevsnode\Backoff();
+
+// $result will now become the string "Some error"
+$result = $backoff->retryOnException(3, function () {
+    throw new \Exception('Some error');
+}, function ($e) {
+    return $e->getMessage();
+});
+
+// $result will now become FALSE
+$result = $backoff->retryOnException(2, function () {
+    throw new \Exception('Some error');
+}, false);
 ```
 
 Settings

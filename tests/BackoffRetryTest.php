@@ -74,4 +74,28 @@ class BackoffRetryTest extends TestCase
             throw $ex;
         }
     }
+
+    public function testRetryFinal()
+    {
+        $msg = 'Some error';
+
+        $result = $this->backoff->retryOnException(2, function () use ($msg) {
+            throw new \Exception($msg);
+        }, false);
+        $this->assertEquals(false, $result);
+
+        $result = $this->backoff->retryOnException(2, function () use ($msg) {
+            throw new \Exception($msg);
+        }, function () {
+            return false;
+        });
+        $this->assertEquals(false, $result);
+
+        $result = $this->backoff->retryOnException(2, function () use ($msg) {
+            throw new \Exception($msg);
+        }, function ($e) {
+            return $e->getMessage();
+        });
+        $this->assertEquals($msg, $result);
+    }
 }
