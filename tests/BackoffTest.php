@@ -165,4 +165,48 @@ class BackoffTest extends TestCase
         $this->assertGreaterThanOrEqual($a, $i);
         $this->assertLessThanOrEqual($b, $i);
     }
+
+    public function testCustomExceptionsExpected()
+    {
+        $this->backoff->setExceptions([
+            BackoffTestException1::class,
+        ]);
+
+        $c = 0;
+        $func = function() use (&$c) {
+            $c++;
+            throw new BackoffTestException1();
+        };
+
+        $j = 2;
+        $this->backoff->retryOnException($j, $func, true);
+
+        $this->assertEquals($j, $c);
+    }
+
+    public function testCustomExceptionsUnexpected()
+    {
+        $this->backoff->setExceptions([
+            BackoffTestException1::class,
+        ]);
+
+        $this->expectException(BackoffTestException2::class);
+
+        $c = 0;
+        $this->backoff->retryOnException(2, function() use (&$c) {
+            $c++;
+            throw new BackoffTestException2();
+        }, true);
+
+        // this shouldn't be reached it is rather a safety-net.
+        // BackoffTestException2 should be thrown further directly
+        // hence incrementing $c only once
+        $this->assertEquals(1, $c);
+    }
 }
+
+class BackoffTestException1 extends Exception
+{}
+
+class BackoffTestException2 extends Exception
+{}

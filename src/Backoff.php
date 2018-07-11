@@ -19,6 +19,7 @@ class Backoff
     protected $factor;
     protected $jitter;
     protected $jitterMax;
+    protected $exceptions = [];
 
     private $attempt = 0;
     private $delay = 0;
@@ -105,6 +106,11 @@ class Backoff
         return $this;
     }
 
+    public function setExceptions(array $exceptions)
+    {
+        $this->exceptions = $exceptions;
+    }
+
     public function addDelay()
     {
         $delay = ($this->factor * $this->attempt * $this->min);
@@ -142,6 +148,31 @@ class Backoff
 
     public function retryOnException($retries, callable $func, $final = null)
     {
+        $catch = function($i, $e) use ($retries, $func, $final) {
+            if (!empty($this->exceptions)) {
+                if (!in_array(get_class($e), $this->exceptions)) {
+                    throw $e;
+                }
+            }
+
+            if ($i + 1 === $retries) {
+                $this->resetDelay();
+
+                if (isset($final)) {
+                    if (is_callable($final)) {
+                        return call_user_func($final, $e);
+                    }
+                    return $final;
+                }
+
+                throw $e;
+            }
+
+            $this->addDelay();
+
+            return null;
+        };
+
         for ($i = 0; $i < $retries; $i++) {
             usleep($this->getDelay() * 1000);
 
@@ -150,21 +181,14 @@ class Backoff
 
                 $this->resetDelay();
                 return $return;
+            } catch (\Throwable $t) {
+                $return = $catch($i, $t);
             } catch (\Exception $e) {
-                if ($i + 1 === $retries) {
-                    $this->resetDelay();
+                $return = $catch($i, $e);
+            }
 
-                    if (isset($final)) {
-                        if (is_callable($final)) {
-                            return call_user_func($final, $e);
-                        }
-                        return $final;
-                    }
-
-                    throw $e;
-                }
-
-                $this->addDelay();
+            if (isset($return)) {
+                return $return;
             }
         }
     }
