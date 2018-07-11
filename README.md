@@ -59,6 +59,7 @@ max|Integer|30000|Maximum delay (in ms)
 factor|Float|2.0|Multiplicator of delay on additional delays
 jitter|Boolean|true|Allow jitter
 jitterMax|Integer|2000|Maximum jitter (in ms)
+exceptions|List of Strings|every _Throwable_/_Exception_|Specific list of exception-classes which will be retried
 
 
 The settings can be passed as an associative array to the constructor and returned or adjusted after instantiation:
